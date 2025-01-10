@@ -57,7 +57,8 @@ async function loadCatValue(catID) {
   // const response = await fetch("https://api.thecatapi.com/v1/breeds/" + catID);
   // const catDetails = await response.json();
   const catImageDetails = await getCatImgUrl(catID);
-  console.log("Cat_Count::" + catImageDetails.length);
+  console.log("Cat_Image_Details::" + JSON.stringify(catImageDetails));
+  //console.log("Cat_Count::" + catImageDetails.length);
   if (catImageDetails && catImageDetails.length > 0) {
     console.log("results::" + catImageDetails[0].id);
     const carouselItem = Carousel.createCarouselItem(
@@ -104,6 +105,7 @@ breedSelect.addEventListener("change", () => {
 axios.interceptors.request.use((request) => {
   request.startTime = new Date();
   console.log("startTime" + request.startTime);
+  progressBar.style.width = "0%";
   return request;
 });
 axios.interceptors.response.use((response) => {
@@ -112,7 +114,9 @@ axios.interceptors.response.use((response) => {
   console.log("finalTime:" + finalTime);
   return response;
 });
+
 /**
+ 
  * 6. Next, we'll create a progress bar to indicate the request is in progress.
  * - The progressBar element has already been created for you.
  *  - You need only to modify its "width" style property to align with the request progress.
@@ -145,9 +149,69 @@ axios.interceptors.response.use((response) => {
  * - You can call this function by clicking on the heart at the top right of any image.
  */
 export async function favourite(imgId) {
-  // your code here
+  const imageCount = await getFavorites(imgId);
+  if (imageCount > 0) {
+    deleteFavorites(imgId);
+  }
+  else {
+    postFavorites(imgId);
+  }
 }
 
+async function postFavorites(imgId) {
+  var results = "";
+  try {
+    const response = await axios.post(
+      "https://api.thecatapi.com/v1/favourites/", {
+      image_id: `${imgId}`
+    },
+      {
+        headers: {
+          'x-api-key': `${API_KEY}`
+        }
+      }
+    );
+    results = await response.message;
+  }
+  catch (ex) {
+    console.log("EXCEPTION::" + ex);
+  }
+  return results;
+}
+
+async function getFavorites(imgId) {
+  const response = await axios.get(
+    "https://api.thecatapi.com/v1/favourites?image_id=" + imgId, {
+    headers: {
+      'x-api-key': `${API_KEY}`
+    }
+  }
+  );
+  const count = response.data.length;
+  console.log("Count::" + count);
+  return count;
+}
+
+async function deleteFavorites(imgId) {
+  try {
+    alert("Inside delete");
+    const response = await axios.delete(
+      `https://api.thecatapi.com/v1/favourites/${imgId}`, {
+      headers: {
+        'x-api-key': `${API_KEY}`
+      }
+    }
+    );
+    console.log("Favorite deleted successfully:", response.data);
+  } catch (error) {
+    if (error.response) {
+      console.error("Error deleting favorite:", error.response.data);
+    } else {
+      console.error("Network Error:", error.message);
+    }
+  }
+
+}
 /**
  * 9. Test your favourite() function by creating a getFavourites() function.
  * - Use Axios to get all of your favourites from the cat API.
@@ -158,6 +222,26 @@ export async function favourite(imgId) {
  *    repeat yourself in this section.
  */
 
+getFavouritesBtn.addEventListener('click', ()=>{
+    GetFavourites();
+})
+async function GetFavourites(){
+  const response = await axios.get(
+    "https://api.thecatapi.com/v1/favourites", {
+    headers: {
+      'x-api-key': `${API_KEY}`
+    }
+  }
+  );
+  console.log("Response::"+JSON.stringify(response.data));
+  const count = response.data.length;
+   Carousel.clear();
+   response.data.forEach(element => {
+     const newItem = Carousel.createCarouselItem(element.image.url, "", element.image.id);
+     Carousel.appendCarousel(newItem);
+     Carousel.start();
+   });
+}
 /**
  * 10. Test your site, thoroughly!
  * - What happens when you try to load the Malayan breed?
